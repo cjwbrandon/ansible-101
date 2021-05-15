@@ -1,0 +1,21 @@
+# Application servers
+[app]
+192.168.60.4
+192.168.60.5
+
+# Database servers
+[db]
+192.168.60.6
+
+# Group has all the servers
+# ':' -> Group of groups 
+[multi:children]
+app
+db
+
+# Variables for all the servers
+[multi:vars]
+ansible_ssh_user=vagrant
+# Note: this is the default insecure key with vagrant
+# If you allow insert_key, check `vagrant ssh-config` for the new private key path
+ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_key

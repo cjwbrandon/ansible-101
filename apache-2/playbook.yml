@@ -1,0 +1,22 @@
+---
+- name: Install Apache
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Load variable files
+      include_vars: "{{ item }}"
+      with_first_found:
+        - "vars/apache_{{ ansible_os_family }}.yml"
+        - vars/apache_default.yml
+
+  handlers:
+    - import_tasks: handlers/apache.yml
+
+  tasks:
+    - import_tasks: tasks/apache.yml
+      # To override variables
+      # vars:
+      #   apache_package: apache3
+
+- import_playbook: playbooks/app.yml

@@ -1,0 +1,52 @@
+---
+# Using commands and shell scripts
+- name: Install Apache
+  hosts: ec2
+  become: true
+
+  tasks:
+    - name: Install Apache
+      command: yum install --quiet -y httpd httpd-devel
+    - name: Copy configuration files
+      command: >
+        cp httpd.conf /etc/httpd/conf/httpd.conf
+    - command: >
+        cp httpd-vhosts /etc/httpd/conf/httpd-vhosts.conf
+    - name: Start Apache and configure it to run at boot
+      shell: |
+        service httpd start
+        hkconfig httpd on
+
+---
+# Using modules
+- name: Install Apache
+  hosts: ec2
+  become: true
+
+  tasks:
+    - name: Install Apache
+      yum:
+        name:
+          - httpd
+          - httpd-devel
+        state: present
+
+    - name: Copy configuration files
+      copy:
+        # Jinja - both syntax of grabbing properties are fine
+        src: "{{ items.src }}"
+        dest: "{{ items['dest'] }}"
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - src: httpd.conf
+          dest: /etc/httpd/conf/httpd.conf
+        - src: httpd-vhosts
+          dest: /etc/httpd/conf/httpd-vhosts.conf
+
+    - name: Ensure Apache is started now and at boot
+      service:
+        name: httpd
+        state: started
+        enabled: true

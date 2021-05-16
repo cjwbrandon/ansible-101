@@ -1,0 +1,61 @@
+---
+- name: Install Apache
+  hosts: centos
+  become: true
+
+  tasks:
+    #######################################################
+    # Setting env variables that will persist on the server
+    # Setting environment variables for a particular user
+    - name: Add an environment variable to the remote user's shell
+      lineinfile:
+        dest: "~/.bash_profile"
+        regexp: "^ENV_VAR="
+        line: "ENV_VAR1=value1"
+      become: false # can turn off become for individual task
+
+    # Setting global variables
+    - name: Add an environment variable to the remote user's shell
+      lineinfile:
+        dest: "/etc/environment"
+        regexp: "^ENV_VAR="
+        line: "ENV_VAR2=value2"
+
+    - name: Get the value of an environment variable
+      shell: "source ~/.bash_profile && echo $ENV_VAR1"
+      register: foo # Registers the output to this variable
+
+    - debug: msg="The variable is {{ foo.stdout }}"
+
+    #########################################
+    # Task-based environment vars  - will not be persisted on the servers
+    - name: Download file
+      get_url:
+        url: http://ipv4.download.thinkbroadband.com/20MB.zip
+        dest: /tmp
+      # e.g. proxy
+      environment:
+        proxy_vars
+        # http_proxy: http://example-proxy:80/
+        # https_proxy: https://example-proxy:80/
+
+  vars: # - will not be persisted on the server
+    proxy_vars:
+      http_proxy: http://example-proxy:80/
+      https_proxy: https://example-proxy:80/
+
+  # vars_files:
+  # - <path-to-file>
+
+  # Loading variable files using include_vars and with_first_found
+  - name: Load variable files
+    include_vars: "{{ item }}"
+    with_first_found:
+      - <path>
+      - <path2>
+
+  #########################
+  # Playbook-level env vars - will not be persisted on the server
+  environment:
+    http_proxy: http://example-proxy:80/
+    https_proxy: https://example-proxy:80/

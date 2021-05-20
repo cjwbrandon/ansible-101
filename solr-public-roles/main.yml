@@ -1,0 +1,13 @@
+---
+- hosts: all
+  become: yes
+
+  vars:
+    # override variable in firewall role
+    firewall_log_dropped_packets: false
+
+  roles:
+    - geerlingguy.ntp
+    - geerlingguy.firewall
+    - geerlingguy.java
+    - geerlingguy.solr

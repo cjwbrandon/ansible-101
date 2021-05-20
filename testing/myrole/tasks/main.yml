@@ -1,0 +1,6 @@
+---
+# tasks file for myrole
+- name: Install apache.
+  yum:
+    name: httpd
+    state: present

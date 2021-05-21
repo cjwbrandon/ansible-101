@@ -1,0 +1,107 @@
+---
+- hosts: centos
+  become: true
+
+  handler:
+    - name: restart ssh
+      service:
+        name: sshd
+        state: restarted
+
+  tasks:
+    # Change SSH port
+    - name: Tell SELinux about SSH's new port
+      seport:
+        ports: 2849
+        proto: tcp
+        setype: ssh_port_t
+        state: present
+
+    # Check configs cat /etc/ssh/sshd_config
+    # PasswordAuthentication no
+    # PermitRootLogin no
+    # Port {not-22}
+    - name: Make sure SSH is more secure
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        validate: 'sshd -T -f %s'
+      with_items:
+        # any line that matches the regex, match is with the line
+        - regexp: "^PasswordAuthentication"
+          line: "PasswordAuthentication no"
+        - regexp: "^PermitRootLogin"
+          line: "PermitRootLogin no"
+        - regexp: "^Port"
+          line: "Port 2849"
+      notify: restart ssh
+
+    # Sudo accounts - cat /etc/sudoers
+    # Abide by Principle of Least Privilege
+    - name: Add sudo group rights
+      lineinfile:
+        dest: /etc/sudoers
+        regexp: '^johndoe'
+        line: 'johndoe ALL=(ALL) NOPASSWD: ALL'
+        state: present
+        validate: 'visudo -cf %s'
+
+    - name: Edit file permissions
+      file:
+        path: /etc/ssh/sshd_config
+        mode: 0600
+
+    # Remove unused apps
+    - name: Remove unused packages
+      package:
+        name:
+          - httpd
+          - nano
+          - mailutils
+        state: absent
+
+    - name: Make sure everything's up to date
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+      # yum:
+      #   name: '*'
+      #   state: latest
+
+    # Auto updates for distribution
+    - name: Set up autoupdates
+      yum:  # dnf for later versions
+        name: yum-cron  # dnf-automatic
+        state: present
+
+    - name: Ensure auto updates are running
+      service:
+        name: yum-cron  # dnf_automatic-install.timer
+        state: started
+        enabled: yes
+
+    # Configure firewall
+    - name: Install firewalld
+      package:
+        name: firewalld
+        state: present
+    
+    - name: Configure ports in firewall
+      firewalld:
+        state: "{{ item.state }}"
+        port: "{{ item.port }}"
+        zone: external
+        immediate: yes
+        permanent: yes
+      with_items:
+        - { state: 'enabled', port: 2849/tcp }
+        - { state: 'enabled', port: 123/udp }
+
+    - name: Ensure firewalld is running
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
